@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip3 list:*)",
+      "Bash(python3 -c \"import sqlite3; print\\(sqlite3.sqlite_version\\)\")",
+      "Bash(python3 -c \"import cv2; print\\(cv2.__version__\\)\")",
+      "Bash(python:*)",
+      "Bash(ffprobe -v quiet -print_format json -show_format -show_streams /home/claude/license/video1.mp4)",
+      "Bash(ffprobe -v quiet -print_format json -show_format -show_streams /home/claude/license/video2.MOV)",
+      "Bash(wait)",
+      "Bash(python3 -c \"import ultralytics, easyocr, cv2; print\\('deps OK'\\)\")",
+      "Bash(pip3 install *)",
+      "Bash(pip3 uninstall *)",
+      "Bash(python3 -c \"import cv2; print\\('cv2 OK', cv2.__version__\\)\")",
+      "Bash(LPR_MODEL_PATH=models/best.pt python3 main.py video video2.MOV --no-save)",
+      "Bash(python3 -c ' *)",
+      "Bash(LPR_MODEL_PATH=models/best.pt python3 main.py video video1.mp4 --no-save)"
+    ]
+  }
+}
