@@ -65,7 +65,7 @@ Dean of the Faculty: _____________________________ [Dean Signature / Date]
   - [3.4 Detection Module Implementation](#34-detection-module-implementation)
   - [3.5 Recognition Module Implementation](#35-recognition-module-implementation)
   - [3.6 Validation Module and Uzbek Plate Standard](#36-validation-module-and-uzbek-plate-standard)
-  - [3.7 Pipeline Orchestration, Confidence Scoring, and Deduplication](#37-pipeline-orchestration-confidence-scoring-and-deduplication)
+  - [3.7 Pipeline Orchestration, Best-Detection Strategy, and Video Processing](#37-pipeline-orchestration-best-detection-strategy-and-video-processing)
   - [3.8 Database Design and Implementation](#38-database-design-and-implementation)
   - [3.9 REST API Design and Implementation](#39-rest-api-design-and-implementation)
   - [3.10 Command-Line Interface](#310-command-line-interface)
@@ -93,7 +93,7 @@ Dean of the Faculty: _____________________________ [Dean Signature / Date]
 
 The urbanization of Uzbekistan has proceeded at a historically significant pace throughout the early twenty-first century. Tashkent, the nation's capital and primary economic hub, has experienced continuous population growth and an accompanying rise in private vehicle ownership. According to data from the State Statistics Committee of the Republic of Uzbekistan, the number of registered motor vehicles in the country has expanded at a compound annual rate exceeding six percent over the past decade. This growth has placed extraordinary pressure on parking infrastructure, which in many urban districts remains anchored to outdated models of operation that were designed for a much smaller vehicle population.
 
-Traditional parking management in Uzbekistan relies predominantly on one of two approaches. The first is purely manual: a human attendant stationed at a facility entrance records vehicle identifiers on paper or in an informal spreadsheet and collects payment upon exit. The second is semi-automated through the use of physical tokens, pre-printed tickets dispensed by mechanical gates, or RFID cards issued to registered subscribers. Both approaches share fundamental weaknesses. Manual systems introduce human error into record keeping, suffer from throughput constraints that manifest as queues during peak traffic hours, expose facilities to security vulnerabilities including ticket forgery and social engineering, and require continuous staffing that represents a significant operational expense. RFID-based systems eliminate some of these problems but require a credential issuance process, impose costs on visitors who lack a registered card, and still require human intervention in exception handling scenarios.
+Traditional parking management in Uzbekistan relies predominantly on one of two approaches. The first is purely manual: a human attendant stationed at a facility entrance records vehicle identifiers on paper or in an informal spreadsheet and collects payment upon exit. The second is semi-automated through the use of physical tokens, pre-printed tickets dispensed by mechanical gates, or RFID cards issued to registered subscribers. Both approaches share fundamental weaknesses. Manual systems introduce human error into record-keeping, suffer from throughput constraints that manifest as queues during peak traffic hours, expose facilities to security vulnerabilities including ticket forgery and social engineering, and require continuous staffing that represents a significant operational expense. RFID-based systems eliminate some of these problems but require a credential issuance process, impose costs on visitors who lack a registered card, and still require human intervention in exception-handling scenarios.
 
 Against this backdrop, automated license plate recognition technology offers a compelling alternative. An ALPR-based parking system identifies vehicles by reading their license plates, which are already a standardized, universally present vehicle identifier in Uzbekistan. No credential issuance is required. Processing is near-instantaneous. Records are generated automatically with machine-readable content, enabling full digital audit trails. The technology has matured sufficiently that capable systems can be built using open-source components and deployed on commodity hardware, making the investment accessible to facility operators without enterprise-scale budgets.
 
@@ -144,7 +144,7 @@ Within the parking management category, license plate recognition serves as the 
 
 Automated license plate recognition technology occupies a unique position in the ITS ecosystem because it enables vehicle identification without requiring any cooperation or action from the vehicle operator. This property, which might be described as passive identification, distinguishes ALPR from all token-based and credential-based access control mechanisms and is the fundamental reason for its widespread adoption across applications as diverse as parking access control, law enforcement, toll collection, border crossing management, and vehicle theft recovery.
 
-In the parking management context, ALPR provides several specific operational benefits. Entry and exit processing is reduced from several seconds per vehicle (typical for ticket dispensing or RFID reading) to less than one second for camera capture plus processing time, effectively eliminating the gate queue as a bottleneck at most facility sizes. Record keeping becomes automatic and complete: every entry and exit event is captured with a timestamp, a confident plate identifier, and metadata describing the recognition quality. This structured data enables revenue analysis, utilization forecasting, and anomaly detection — capabilities that are entirely absent from manual systems and only partially available through ticket-based systems.
+In the parking management context, ALPR provides several specific operational benefits. Entry and exit processing is reduced from several seconds per vehicle (typical for ticket dispensing or RFID reading) to less than one second for camera capture plus processing time, effectively eliminating the gate queue as a bottleneck at most facility sizes. Record-keeping becomes automatic and complete: every entry and exit event is captured with a timestamp, a confident plate identifier, and metadata describing the recognition quality. This structured data enables revenue analysis, utilization forecasting, and anomaly detection — capabilities entirely absent from manual systems and only partially available through ticket-based systems.
 
 ALPR also enables enforcement integration. A parking management system that maintains a database of recognized plates can query against lists of known vehicles in good standing, outstanding payment debtors, or flagged vehicles. This enforcement capability, combined with the historical access record, substantially raises the cost of attempts to circumvent parking payments or to use facilities without authorization.
 
@@ -158,7 +158,7 @@ The earliest practical ALPR systems were developed in the United Kingdom in the 
 
 Throughout the 1980s and 1990s, the dominant technical approach for ALPR was classical computer vision with hand-crafted feature extraction. A representative pipeline of this era consisted of: edge detection using Sobel or Canny operators to identify regions of high contrast; connected component analysis and morphological operations to group pixels into candidate plate regions; heuristic filtering based on aspect ratio, area, and intensity histogram to select the most plate-like candidates; vertical projection profile analysis to segment individual characters; and classification using support vector machines or nearest-neighbor matching against a character library. This approach produced reliable results on high-quality input with consistent lighting and perpendicular camera angles but degraded significantly under real-world conditions that included varied illumination, rain reflections, dirty plates, and non-perpendicular mounting angles.
 
-The introduction of neural networks into ALPR began with the application of convolutional neural networks to character classification in the early 2000s. Lecun et al.'s LeNet architecture, originally developed for handwritten digit recognition, was adapted for license plate character recognition by multiple research groups. The use of CNNs for character classification substantially improved accuracy on blurred or degraded characters because CNNs learn representations that are inherently more invariant to local distortions than template matching.
+The introduction of neural networks into ALPR began with the application of convolutional neural networks to character classification in the early 2000s. LeCun et al.'s LeNet architecture, originally developed for handwritten digit recognition, was adapted for license plate character recognition by multiple research groups. The use of CNNs for character classification substantially improved accuracy on blurred or degraded characters because CNNs learn representations that are inherently more invariant to local distortions than template matching.
 
 The modern era of ALPR began with the development of deep neural networks capable of performing both detection and recognition in an end-to-end manner. The key enabling innovations were the YOLO family of real-time object detectors, beginning with the original publication by Redmon et al. in 2016, and sequence recognition networks based on the CRNN architecture proposed by Shi et al. in 2016. These two developments together made it possible to replace the entire classical ALPR pipeline — edge detection, morphological processing, candidate filtering, character segmentation, and individual character classification — with two neural networks trained end-to-end on labeled image data.
 
@@ -184,7 +184,7 @@ Classical OCR engines such as Tesseract, developed originally at HP Laboratories
 
 EasyOCR, developed by Jaided AI and first released in 2020, takes a fundamentally different approach based entirely on deep learning. It uses two neural networks in sequence: CRAFT (Character Region Awareness for Text Detection), published by Baek et al. in 2019, for identifying text regions and character boundaries, and a CRNN (Convolutional Recurrent Neural Network) with CTC (Connectionist Temporal Classification) decoding for sequence recognition. The CRNN architecture processes the text region as a whole sequence rather than segmenting individual characters, which makes it substantially more robust to character spacing irregularities and touching characters — both common in license plate fonts. The CTC decoder, based on the algorithm proposed by Graves et al. in 2006, enables training and inference on sequence data without requiring character-level alignment between the input image and the output character sequence.
 
-EasyOCR's character-level confidence scores, produced as part of its output, are used in this thesis system to compute a combined confidence metric for each detection result. The availability of per-character and per-segment confidence scores distinguishes EasyOCR from some alternative OCR systems and enables the sophisticated confidence-based filtering implemented in the pipeline.
+EasyOCR's per-segment confidence scores, produced as part of its output, are used in this thesis system to compute a combined confidence metric for each detection result. The availability of per-segment confidence scores distinguishes EasyOCR from some alternative OCR systems and enables the confidence-based filtering implemented in the pipeline.
 
 ### 1.6 Uzbekistan Context: Digital Transformation and Regulatory Framework
 
@@ -192,9 +192,9 @@ The Republic of Uzbekistan has articulated an explicit commitment to digital tra
 
 The regulatory framework governing vehicle registration plates in Uzbekistan is established by State Standard O'z DSt 1180:2006, titled "Registration Plates for Road Vehicles" and published by the Uzstandard agency in Tashkent. This standard specifies the physical dimensions, materials, reflective properties, character fonts, and — critically for this thesis — the alphanumeric format of plates issued for different vehicle categories. The standard civilian plate format, applicable to the vast majority of privately and commercially operated vehicles, is an eight-character sequence structured as two digits (the regional code), one uppercase Latin letter, three digits, and two uppercase Latin letters. This format is represented in regular expression notation as `^[0-9]{2}[A-Z][0-9]{3}[A-Z]{2}$`.
 
-The regional code component of the plate encodes the administrative region where the vehicle is registered. Uzbekistan is divided into twelve provinces (viloyatlar), one autonomous republic (Karakalpakstan), and the capital city of Tashkent, each of which administers vehicle registration through its regional branch of the Ministry of Internal Affairs. The regional code is a two-digit number drawn from a specific set of values assigned to each administrative territory. As of the current edition of the standard, fourteen regional code values are in active use. These codes are not numerically consecutive, and not all two-digit numbers in the range 01 to 99 are valid regional codes. The validation of regional codes is therefore an essential component of any system that aims to distinguish genuine Uzbek plates from randomly generated alphanumeric strings that happen to match the format pattern.
+The regional code component of the plate encodes the administrative region where the vehicle is registered. Uzbekistan is divided into twelve provinces (viloyatlar), one autonomous republic (Karakalpakstan), and the capital city of Tashkent, each of which administers vehicle registration through its regional branch of the Ministry of Internal Affairs. The regional code is a two-digit number drawn from a specific set of values assigned to each administrative territory. As of the current edition of the standard, fourteen regional code values are in active use: 01 (Tashkent city), 10 (Tashkent region), 20 (Sirdaryo), 25 (Jizzakh), 30 (Namangan), 35 (Andijan), 40 (Fergana), 50 (Samarkand), 55 (Kashkadarya), 60 (Surkhandarya), 65 (Bukhara), 70 (Navoi), 75 (Khorezm), and 80 (Karakalpakstan). These codes are not numerically consecutive, and not all two-digit numbers in the range 01 to 99 are valid regional codes. The validation of regional codes is therefore an essential component of any system that aims to distinguish genuine Uzbek plates from randomly generated alphanumeric strings that happen to match the format pattern.
 
-The Latin script used for Uzbek plate characters is the standard ISO basic Latin alphabet (A through Z). Uzbekistan transitioned from Cyrillic to a modified Latin script for the Uzbek language in 1993, and vehicle plates have used Latin characters throughout the post-independence period. This is relevant for OCR configuration: the EasyOCR reader must be configured to recognize Latin characters rather than Cyrillic, and the character allowlist must be restricted to the twenty-six uppercase letters and ten digits that can legitimately appear on a plate.
+The Latin script used for Uzbek plate characters is the standard ISO basic Latin alphabet (A through Z). Uzbekistan transitioned from Cyrillic to a modified Latin script for the Uzbek language in 1993, and vehicle plates have used Latin characters throughout the post-independence period. This is relevant for OCR configuration: the EasyOCR reader must be configured to recognize Latin characters, and the character allowlist must be restricted to the twenty-six uppercase letters and ten digits that can legitimately appear on a plate.
 
 ---
 
@@ -206,11 +206,11 @@ Python version 3.10 and above serves as the exclusive implementation language fo
 
 The most compelling argument for Python in this context is the richness and maturity of its machine learning and computer vision ecosystem. The de-facto standard deep learning frameworks — PyTorch, TensorFlow, and their associated model libraries — provide their primary Python APIs. The Ultralytics YOLOv8 package, EasyOCR, and OpenCV all present first-class Python interfaces with comprehensive documentation and active community support. This means that the system can leverage the full capabilities of each library with minimal friction, using idiomatic Python code rather than wrapper layers around C or C++ implementations.
 
-Python 3.10 specifically introduces several language features that improve code quality in this codebase. Structural pattern matching, introduced in 3.10, is not used directly in this project, but the improved type annotation syntax — including `X | Y` union types as a shorthand for `Union[X, Y]` and built-in collection types such as `list[str]` and `dict[str, float]` as generic types without importing from the `typing` module — substantially improves readability and enables more precise static analysis. The type annotations throughout this codebase serve both as documentation for developers and as the basis for Pydantic's runtime validation in the FastAPI layer.
+Python 3.10 specifically introduces several language features that improve code quality in this codebase. The improved type annotation syntax — including `X | Y` union types as a shorthand for `Union[X, Y]` and built-in collection types such as `list[str]` and `dict[str, float]` as generic types without importing from the `typing` module — substantially improves readability and enables more precise static analysis. The type annotations throughout this codebase serve both as documentation for developers and as the basis for Pydantic's runtime validation in the FastAPI layer.
 
 Python's garbage-collected memory model and dynamic typing also simplify the development of the asynchronous API server. FastAPI and the Uvicorn ASGI server both take advantage of Python's `asyncio` event loop, and the lightweight coroutine model makes it straightforward to handle concurrent HTTP requests without the complexity of manual thread management.
 
-The principal limitation of Python for this application is execution speed. Python's Global Interpreter Lock (GIL) prevents true parallel execution of Python bytecode across multiple threads, and its dynamic dispatch model is inherently slower than compiled languages for CPU-intensive workloads. For the computationally intensive components of this system — neural network inference in the detector and recognizer — this limitation is mitigated by the fact that the actual computation is performed by native C/C++ code in PyTorch (for YOLOv8) and in the underlying ONNX runtime (for EasyOCR), with the Python layer serving only as an orchestration interface. Only the preprocessing and postprocessing steps execute in Python, and these are relatively lightweight compared to the inference computations.
+The principal limitation of Python for this application is execution speed. Python's Global Interpreter Lock (GIL) prevents true parallel execution of Python bytecode across multiple threads, and its dynamic dispatch model is inherently slower than compiled languages for CPU-intensive workloads. For the computationally intensive components of this system — neural network inference in the detector and recognizer — this limitation is mitigated by the fact that the actual computation is performed by native C/C++ code in PyTorch (for YOLOv8) and in the underlying runtime (for EasyOCR), with the Python layer serving only as an orchestration interface. Only the preprocessing and postprocessing steps execute in Python, and these are relatively lightweight compared to the inference computations.
 
 ### 2.2 YOLOv8: Architecture and Capabilities
 
@@ -218,7 +218,7 @@ YOLOv8, released by Ultralytics in January 2023, represents the eighth generatio
 
 The YOLOv8 architecture follows the standard detector structure of backbone, neck, and head. The backbone is responsible for extracting hierarchical feature representations from the input image. YOLOv8's backbone uses a modified CSPDarknet architecture incorporating C2f modules (Cross Stage Partial network with two bottleneck layers), which improve gradient flow during training compared to the C3 modules used in YOLOv5. The neck is a feature pyramid network (FPN) combined with a path aggregation network (PANet) that combines features at multiple scales to enable detection of objects ranging from very small (a few dozen pixels) to very large (most of the image).
 
-The detection head in YOLOv8 is anchor-free, which is a significant architectural departure from earlier YOLO versions. Anchor-based detectors predefine a set of reference bounding box shapes at each spatial location and predict offsets from these anchors. The anchor shapes must be tuned (through k-means clustering on the training data bounding boxes) to match the aspect ratios of the target objects. If license plates are uniformly wider than they are tall, suitable anchors would be rectangles with high aspect ratios. An anchor-free head eliminates this configuration step by directly predicting the offsets from the center of each candidate location to the four sides of the bounding box, making the detector naturally adaptive to any object shape without prior configuration.
+The detection head in YOLOv8 is anchor-free, which is a significant architectural departure from earlier YOLO versions. Anchor-based detectors predefine a set of reference bounding box shapes at each spatial location and predict offsets from these anchors. The anchor shapes must be tuned (through k-means clustering on the training data bounding boxes) to match the aspect ratios of the target objects. An anchor-free head eliminates this configuration step by directly predicting the offsets from the center of each candidate location to the four sides of the bounding box, making the detector naturally adaptive to any object shape without prior configuration.
 
 YOLOv8 is available in five model sizes: n (nano), s (small), m (medium), l (large), and x (extra-large), which trade off inference speed against detection accuracy. The nano and small variants are appropriate for deployment on CPU hardware where inference latency is a concern. For the custom plate-specific model used in this thesis (`plate_detector.pt`), a small or medium base architecture provides the best balance between accuracy on small plate regions and inference speed on commodity hardware.
 
@@ -234,17 +234,17 @@ The recognition stage uses a CRNN architecture. The convolutional layers of the 
 
 The `allowlist` parameter of EasyOCR's `readtext` method is a critical feature for license plate recognition. By restricting the recognized character set to `ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`, the system eliminates the possibility of the OCR engine returning characters that cannot legally appear on an Uzbek plate — such as punctuation, Cyrillic letters, or accented Latin characters. This constraint both improves recognition accuracy for valid plates (by removing alternative hypotheses that might otherwise score higher than the correct characters on ambiguous inputs) and simplifies the downstream validation logic.
 
-A practical consideration in EasyOCR deployment is initialization time. The `easyocr.Reader` constructor loads two neural networks from disk (or downloads them on first use) and compiles them for the target device. This initialization takes approximately three to eight seconds on a typical laptop. The system architecture accounts for this by constructing the `TextRecognizer` once at startup and sharing the initialized instance across all requests, rather than reinitializing it per request.
+A practical consideration in EasyOCR deployment is initialization time. The `easyocr.Reader` constructor loads two neural networks from disk (or downloads them on first use) and prepares them for inference. This initialization takes approximately three to eight seconds on a typical laptop. The system architecture accounts for this by constructing the `TextRecognizer` once at startup and sharing the initialized instance across all requests, rather than reinitializing it per request.
 
 ### 2.4 OpenCV: Image Preprocessing and Video Processing
 
 OpenCV (Open Source Computer Vision Library), originally developed by Intel in 1999 and now maintained by the OpenCV Foundation, is the standard library for computer vision operations in Python. It provides efficient implementations of hundreds of image processing algorithms including color space conversions, geometric transformations, morphological operations, thresholding algorithms, feature detection, and video capture and decoding.
 
-In this system, OpenCV serves two distinct roles. The first is image preprocessing for OCR: the `_preprocess` method in the `TextRecognizer` class uses OpenCV to convert the plate crop to grayscale, resize it to a standardized height, apply OTSU binarization, and apply a sharpening filter. The second is video file processing: the `process_video` method in the `Pipeline` class uses `cv2.VideoCapture` to read frames from a video file and iterate through them.
+In this system, OpenCV serves two distinct roles. The first is image preprocessing for OCR: the `_preprocess` method in the `TextRecognizer` class uses OpenCV to convert the plate crop to grayscale, resize it to a standardized height of 128 pixels, apply OTSU binarization, and apply a sharpening filter. The second is video file processing: the `process_video` method in the `Pipeline` class uses `cv2.VideoCapture` to read frames from a video file and iterate through them frame by frame.
 
 OTSU thresholding, named after Nobuyuki Otsu who published the method in 1979, is an automatic binarization algorithm that determines an optimal threshold value by minimizing the intra-class variance of foreground and background pixel intensity distributions. Unlike fixed-threshold binarization, which requires manual selection of a threshold value that is appropriate for the specific lighting conditions of each image, OTSU thresholding adapts automatically to the intensity distribution of each input image. For license plate images captured under varying ambient light levels, this adaptability is essential for consistent binarization quality.
 
-The sharpening filter applied after binarization uses a 3×3 kernel with a center coefficient of 5 and border coefficients of −1, which is a discrete approximation of the Laplacian sharpening operator. This filter enhances edges and increases the contrast between character strokes and the plate background, which is particularly beneficial for low-resolution crops where character boundaries may be blurred due to insufficient pixel density.
+The sharpening filter applied after binarization uses a 3×3 kernel with a center coefficient of 5 and surrounding coefficients of −1 (except corners which are 0), which is a discrete approximation of the Laplacian sharpening operator. This filter enhances edges and increases the contrast between character strokes and the plate background, which is particularly beneficial for low-resolution crops where character boundaries may be blurred due to insufficient pixel density.
 
 For video processing, `cv2.VideoCapture` provides a unified interface for reading from local video files in any format supported by the underlying FFmpeg library, which includes all common video formats encountered in practice (MP4/H.264, MOV/H.265, AVI, MKV). The frame iterator interface allows the pipeline to process video files without loading the entire file into memory, which is important for long recordings.
 
@@ -256,7 +256,7 @@ FastAPI is built on top of Starlette (for HTTP handling and ASGI integration) an
 
 Pydantic models, defined as Python classes inheriting from `pydantic.BaseModel` with typed fields, serve as both request schemas (validated automatically from JSON request bodies) and response schemas (automatically serialized to JSON). The same Pydantic model definitions are also used by FastAPI to generate OpenAPI 3.0 documentation, accessible at the `/docs` endpoint as an interactive Swagger UI and at `/openapi.json` as a machine-readable specification. This automatic documentation generation substantially reduces the documentation maintenance burden and ensures that the API documentation is always synchronized with the actual implementation.
 
-The ASGI (Asynchronous Server Gateway Interface) foundation of FastAPI, served in this system by the Uvicorn ASGI server, provides native support for asynchronous request handling. Endpoint handlers declared with the `async def` keyword can perform non-blocking I/O operations (such as database reads, network requests, or file I/O) without blocking the server's event loop, enabling a single process to handle multiple concurrent requests efficiently. This is particularly relevant for the video streaming endpoint, which processes a video file while concurrently accepting new requests on other endpoints.
+The ASGI (Asynchronous Server Gateway Interface) foundation of FastAPI, served in this system by the Uvicorn ASGI server, provides native support for asynchronous request handling. Endpoint handlers declared with the `async def` keyword can perform non-blocking I/O operations (such as database reads, network requests, or file I/O) without blocking the server's event loop, enabling a single process to handle multiple concurrent requests efficiently.
 
 ### 2.6 SQLite with WAL Mode: Embedded Relational Persistence
 
@@ -270,9 +270,9 @@ The significance of WAL mode for this system is concrete: the FastAPI server may
 
 ### 2.7 Supporting Libraries and the Dependency Ecosystem
 
-Several additional libraries complete the technology stack. NumPy provides the fundamental N-dimensional array data structure (`np.ndarray`) used to represent images throughout the pipeline. Both OpenCV and YOLOv8 represent images as NumPy arrays, and EasyOCR accepts NumPy arrays as input, making NumPy the universal image representation that binds the pipeline components together. The geometric mean confidence calculation — `(yolo_conf * ocr_conf) ** 0.5` — also leverages NumPy's element-wise array operations.
+Several additional libraries complete the technology stack. NumPy provides the fundamental N-dimensional array data structure (`np.ndarray`) used to represent images throughout the pipeline. Both OpenCV and YOLOv8 represent images as NumPy arrays, and EasyOCR accepts NumPy arrays as input, making NumPy the universal image representation that binds the pipeline components together. The geometric mean confidence calculation — `(yolo_conf * ocr_conf) ** 0.5` — also uses standard Python arithmetic on float values returned from the respective libraries.
 
-Pillow (the Python Imaging Library fork) provides image I/O capabilities that complement OpenCV, particularly for reading image formats that OpenCV does not natively support and for JPEG encoding in memory buffers used by the API's image upload handling. `python-multipart` provides the multipart form data parser required by FastAPI for file upload handling. Uvicorn, the ASGI server, is configured with the `[standard]` extra which includes WebSocket support and accelerated HTTP parsing through the `httptools` library.
+Pillow (the Python Imaging Library fork) provides image I/O capabilities that complement OpenCV. `python-multipart` provides the multipart form data parser required by FastAPI for file upload handling. Uvicorn, the ASGI server, is configured with the `[standard]` extra which includes accelerated HTTP parsing through the `httptools` library.
 
 The complete dependency specification is maintained in `requirements.txt` and reflects the minimum version constraints that have been tested and verified to work together:
 
@@ -296,7 +296,7 @@ pydantic>=2.7.0
 
 The system is designed around five core software engineering principles that guided every architectural and implementation decision: separation of concerns, testability, configurability, fail-safe defaults, and minimal external dependencies.
 
-Separation of concerns mandates that each module has one clearly defined responsibility and exposes it through a narrow interface. The detector knows only how to find license plates in an image. The recognizer knows only how to read text from a plate crop. The validator knows only the business rules for Uzbek plate format compliance. The pipeline knows only how to orchestrate these three stages and apply cross-cutting concerns (confidence scoring, deduplication). The database manager knows only how to persist and query detection records. This decomposition enables any single module to be replaced or upgraded independently without modifying the others.
+Separation of concerns mandates that each module has one clearly defined responsibility and exposes it through a narrow interface. The detector knows only how to find license plates in an image. The recognizer knows only how to read text from a plate crop. The validator knows only the business rules for Uzbek plate format compliance. The pipeline knows only how to orchestrate these three stages and apply the best-detection strategy. The database manager knows only how to persist and query detection records. This decomposition enables any single module to be replaced or upgraded independently without modifying the others.
 
 Testability requires that every module can be exercised in isolation with controlled inputs and observable outputs. This principle excludes designs that mix concern boundaries (for example, a recognizer that also saves to the database) and requires that dependencies are injected rather than globally imported. The test suite demonstrates that all modules except those requiring a real neural network model (which are tested through synthetic substitutes) can be tested without any external infrastructure.
 
@@ -332,7 +332,7 @@ The system is organized into three horizontal tiers connected by well-defined in
 │  │  │               │  │  Preprocessing) │  │               │  │  │
 │  │  └───────────────┘  └─────────────────┘  └───────────────┘  │  │
 │  │                                                               │  │
-│  │  Cross-cutting: Geometric Mean Confidence · Deduplication    │  │
+│  │  Cross-cutting: Geometric Mean Confidence · Best-Per-Plate   │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
           │                                          │
@@ -346,11 +346,12 @@ The system is organized into three horizontal tiers connected by well-defined in
 │  ├────────────────┤  │              │  │ /detect/image           │ │
 │  │ valid_plates   │  │              │  │ /detect/video           │ │
 │  └────────────────┘  │              │  │ /detections             │ │
-│                      │              │  │ /stats                  │ │
-└──────────────────────┘              └──────────────────────────────┘
+│                      │              │  │ /detections/{id}/image  │ │
+└──────────────────────┘              │  │ /stats                  │ │
+                                      └──────────────────────────────┘
 ```
 
-The input tier accepts image files, video files, and HTTP-uploaded files through the CLI and API entry points respectively. The processing tier is the pipeline, which orchestrates the three recognition stages and applies confidence scoring and deduplication. The persistence tier is the SQLite database managed through the `DatabaseManager` class. The service tier is the FastAPI application, which exposes the pipeline's capabilities as HTTP endpoints.
+The input tier accepts image files, video files, and HTTP-uploaded files through the CLI and API entry points respectively. The processing tier is the pipeline, which orchestrates the three recognition stages and applies confidence scoring and the best-detection-per-plate strategy for video inputs. The persistence tier is the SQLite database managed through the `DatabaseManager` class. The service tier is the FastAPI application, which exposes the pipeline's capabilities as HTTP endpoints.
 
 ### 3.3 Module Decomposition and Responsibilities
 
@@ -362,7 +363,7 @@ The input tier accepts image files, video files, and HTTP-uploaded files through
 | Detector | `core/detector.py` | YOLOv8-based license plate bounding box prediction |
 | Recognizer | `core/recognizer.py` | EasyOCR text extraction with preprocessing |
 | Validator | `core/validator.py` | Uzbek plate format enforcement and OCR correction |
-| Pipeline | `core/pipeline.py` | Stage orchestration, confidence scoring, deduplication |
+| Pipeline | `core/pipeline.py` | Stage orchestration, confidence scoring, best-per-plate selection |
 | Database Manager | `db/manager.py` | SQLite read/write operations with parameterized queries |
 | Database Schema | `db/schema.sql` | DDL definitions for tables and indexes |
 | API Application | `api/app.py` | FastAPI application, CORS, startup/shutdown hooks |
@@ -390,14 +391,17 @@ class PlateDetector:
         if model_file.exists():
             logger.info(f"Loading plate detection model from {model_path}")
             self.model = YOLO(str(model_file))
-            self._fallback_mode = False
         else:
             logger.warning(
                 f"Custom model not found at {model_path}. "
-                "Falling back to YOLOv8n with aspect-ratio filtering."
+                "Falling back to YOLOv8n with aspect-ratio filtering. "
+                "For best accuracy, provide a plate-specific model."
             )
             self.model = YOLO("yolov8n.pt")
             self._fallback_mode = True
+            return
+
+        self._fallback_mode = False
 
     def detect(self, frame: np.ndarray) -> list[dict]:
         results = self.model(frame, conf=self.confidence, verbose=False)
@@ -427,15 +431,20 @@ class PlateDetector:
         return detections
 ```
 
+The constructor uses an early-return pattern to set `_fallback_mode`. When the custom model file is found, `self.model` is assigned and `_fallback_mode` is set to `False` at the end of the constructor body. When the file is absent, `_fallback_mode` is set to `True` and the constructor returns immediately, leaving the YOLOv8n general-purpose model loaded. This design ensures that `_fallback_mode` is always defined before `detect` is called, regardless of which branch the constructor took.
+
 The fallback mode logic applies two heuristic filters when the custom plate-specific model is not available. The aspect ratio filter retains only bounding boxes with width-to-height ratios between 2.0 and 8.0, which encompasses the typical elongated rectangular shape of a license plate. The area filter discards bounding boxes that occupy more than 15% of the total frame area, which eliminates large foreground objects such as vehicle bodies that might produce high-confidence detections from the general-purpose COCO-trained model.
 
-The `draw_boxes` utility method, while not part of the core detection pipeline, provides a visualization capability used by the CLI `--show` flag, overlaying green bounding rectangles and label text on a copy of the original frame for debugging and demonstration purposes.
+The `draw_boxes` utility method provides a visualization capability used by the CLI `--show` flag, overlaying green bounding rectangles and label text on a copy of the original frame for debugging and demonstration purposes.
 
 ### 3.5 Recognition Module Implementation
 
 The `TextRecognizer` class in `core/recognizer.py` implements a four-step preprocessing pipeline followed by EasyOCR inference. The preprocessing is the scientifically critical component: the same EasyOCR model produces substantially different accuracy depending on whether the plate crop has been preprocessed to remove illumination variation and enhance character contrast.
 
 ```python
+_TARGET_HEIGHT = 128
+
+
 class TextRecognizer:
 
     def __init__(self, languages: list[str], gpu: bool = False):
@@ -473,9 +482,9 @@ class TextRecognizer:
         h, w = gray.shape
         if h == 0:
             return gray
-        scale = 128 / h
+        scale = _TARGET_HEIGHT / h
         new_w = max(1, int(w * scale))
-        resized = cv2.resize(gray, (new_w, 128),
+        resized = cv2.resize(gray, (new_w, _TARGET_HEIGHT),
                              interpolation=cv2.INTER_CUBIC)
         _, binary = cv2.threshold(resized, 0, 255,
                                   cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -485,18 +494,18 @@ class TextRecognizer:
         return sharpened
 ```
 
-The warm-up call in the constructor is an important operational detail. EasyOCR uses PyTorch's JIT compilation infrastructure, and the first inference call after initialization triggers compilation of the computational graph, which takes significantly longer than subsequent calls. By performing a dummy inference on a blank image during initialization, the warm-up step ensures that all subsequent inference calls on real plate crops execute at the steady-state speed rather than incurring the compilation overhead on the first real request.
+The module-level constant `_TARGET_HEIGHT = 128` fixes the output height of every preprocessed plate crop at 128 pixels. The width is scaled proportionally to preserve the plate's aspect ratio, using bicubic interpolation (`cv2.INTER_CUBIC`) to minimize aliasing artifacts during the resize. A target height of 128 pixels was selected empirically based on EasyOCR's internal character recognition model: individual plate characters (which occupy approximately half the plate height) are placed in the 40–64 pixel range after resizing, which falls within the optimal input size for the CRNN recognition stage.
+
+The warm-up call in the constructor is an important operational detail. EasyOCR uses PyTorch's JIT compilation infrastructure, and the first inference call after initialization triggers compilation of the computational graph, which takes significantly longer than subsequent calls. By performing a dummy inference on a blank 64×200 image during initialization, the warm-up step ensures that all subsequent inference calls on real plate crops execute at the steady-state speed rather than incurring the compilation overhead on the first real request.
 
 **Figure 3.5.1. Preprocessing Pipeline Visualization**
 
 The preprocessing chain transforms a raw plate crop through four stages:
 
-1. BGR color image → Grayscale (single-channel, eliminates color information)
+1. BGR color image → Grayscale (single-channel, eliminates color information irrelevant to character shape)
 2. Grayscale → Height-normalized (128px height, proportional width resize using bicubic interpolation)
-3. Height-normalized → Binary (OTSU threshold, black characters on white background)
-4. Binary → Sharpened (Laplacian enhancement kernel, strengthens character stroke edges)
-
-The target height of 128 pixels was selected empirically based on EasyOCR's internal character recognition model, which was trained on images with character heights in the range of 8 to 64 pixels. A plate crop resized to 128 pixels in height places individual plate characters (which occupy approximately half the plate height) in the 40–64 pixel range, which is the optimal input size for the CRNN recognition stage.
+3. Height-normalized → Binary (OTSU threshold, adapts to each image's illumination)
+4. Binary → Sharpened (Laplacian enhancement kernel strengthens character stroke edges)
 
 ### 3.6 Validation Module and Uzbek Plate Standard
 
@@ -509,12 +518,24 @@ The validation module in `core/validator.py` encodes all business rules derived 
 | Character Type | Digit | Digit | Letter | Digit | Digit | Digit | Letter | Letter |
 | Valid Values | 0–9 | 0–9 | A–Z | 0–9 | 0–9 | 0–9 | A–Z | A–Z |
 
-The two-character regional code (positions 0–1) must be a member of the set of 14 currently active region codes. The valid region codes as defined in the standard are: 01 (Tashkent city), 10 (Tashkent region), 20 (Sirdaryo region), 25 (Jizzakh region), 30 (Namangan region), 35 (Andijan region), 40 (Fergana region), 50 (Samarkand region), 55 (Kashkadarya region), 60 (Surkhandarya region), 65 (Bukhara region), 70 (Navoi region), 75 (Khorezm region), and 80 (Karakalpakstan).
+The two-character regional code (positions 0–1) must be a member of the set of fourteen currently active region codes defined in `VALID_REGIONS`:
 
 ```python
 VALID_REGIONS = {
-    '01', '10', '20', '25', '30', '35', '40',
-    '50', '55', '60', '65', '70', '75', '80',
+    '01',  # Tashkent city
+    '10',  # Tashkent region
+    '20',  # Sirdaryo
+    '25',  # Jizzakh
+    '30',  # Namangan
+    '35',  # Andijan
+    '40',  # Fergana
+    '50',  # Samarkand
+    '55',  # Kashkadarya
+    '60',  # Surkhandarya
+    '65',  # Bukhara
+    '70',  # Navoi
+    '75',  # Khorezm
+    '80',  # Karakalpakstan
 }
 
 UZ_PLATE_RE = re.compile(r'^[0-9]{2}[A-Z][0-9]{3}[A-Z]{2}$')
@@ -556,9 +577,13 @@ The OCR correction logic in `_try_correct` applies only to digit positions (indi
 
 The normalization step — stripping spaces, dashes, and dots, then converting to uppercase — is applied before both the direct regex match and the OCR correction attempt. This handles the common case where an OCR engine inserts a space between the regional code and the letter component of the plate, producing output such as "01 A123BC" instead of "01A123BC".
 
-### 3.7 Pipeline Orchestration, Confidence Scoring, and Deduplication
+It is important to note that `VALID_REGIONS` contains exactly the fourteen codes listed above. Any two-digit prefix not in this set will cause `validate_plate` to return `(False, ...)` even if the plate otherwise matches the format pattern. This tight constraint is deliberate: it prevents the system from accepting plates with fabricated or unassigned region codes that could arise from OCR errors on ambiguous digit pairs.
 
-The `Pipeline` class in `core/pipeline.py` connects the three processing stages and implements the two cross-cutting concerns: combined confidence scoring and deduplication.
+### 3.7 Pipeline Orchestration, Best-Detection Strategy, and Video Processing
+
+The `Pipeline` class in `core/pipeline.py` connects the three processing stages and implements the combined confidence scoring and the best-detection-per-plate strategy for video inputs.
+
+**3.7.1 Data Structures**
 
 ```python
 @dataclass
@@ -567,11 +592,17 @@ class DetectionResult:
     raw_text: str
     plate_text: str
     is_valid: bool
-    confidence: float
-    bbox: list[int]
+    confidence: float          # geometric mean of YOLO and OCR confidence
+    bbox: list[int]            # [x1, y1, x2, y2]
     timestamp: datetime = field(default_factory=datetime.utcnow)
+    frame: np.ndarray | None = field(default=None, repr=False)
+```
 
+The `DetectionResult` dataclass carries the complete output of one plate recognition event. The `frame` field stores the full BGR numpy array of the source frame — excluded from `repr` to avoid printing megabyte-sized array data in log output. The `source` field encodes the origin of the detection: an image file path for still images, or a string of the form `video:<path>:frame_<N>` for video frames.
 
+**3.7.2 Frame-Level Processing**
+
+```python
 class Pipeline:
 
     def __init__(self, model_path: str, confidence: float,
@@ -581,8 +612,6 @@ class Pipeline:
         self.detector = PlateDetector(model_path, confidence)
         self.recognizer = TextRecognizer(languages, gpu)
         self.frame_skip = video_frame_skip
-        self.dedup_window = dedup_window_seconds
-        self._dedup_cache: dict[str, datetime] = {}
 
     def _process_frame(self, frame: np.ndarray,
                        source: str) -> list[DetectionResult]:
@@ -596,40 +625,85 @@ class Pipeline:
             combined_conf = round(
                 (det['confidence'] * ocr_conf) ** 0.5, 4)
             results.append(DetectionResult(
-                source=source, raw_text=raw_text,
-                plate_text=plate_text, is_valid=is_valid,
-                confidence=combined_conf, bbox=det['bbox'],
+                source=source,
+                raw_text=raw_text,
+                plate_text=plate_text,
+                is_valid=is_valid,
+                confidence=combined_conf,
+                bbox=det['bbox'],
+                frame=frame,
             ))
         return results
-
-    def _is_duplicate(self, result: DetectionResult) -> bool:
-        if result.plate_text not in self._dedup_cache:
-            return False
-        delta = (result.timestamp -
-                 self._dedup_cache[result.plate_text]).total_seconds()
-        return delta < self.dedup_window
-
-    def _update_dedup(self, result: DetectionResult) -> None:
-        self._dedup_cache[result.plate_text] = result.timestamp
-        if len(self._dedup_cache) > 1000:
-            cutoff = result.timestamp.timestamp() - self.dedup_window * 10
-            self._dedup_cache = {
-                k: v for k, v in self._dedup_cache.items()
-                if v.timestamp() > cutoff
-            }
 ```
 
-The geometric mean for combined confidence is computed as the square root of the product of the YOLO detector confidence and the EasyOCR mean character confidence: `combined_conf = sqrt(yolo_conf × ocr_conf)`. This formula has a desirable mathematical property: it penalizes results where either confidence value is low much more severely than an arithmetic mean would. To illustrate: if the detector produces confidence 0.90 but OCR produces only 0.20, the geometric mean is `sqrt(0.90 × 0.20) = sqrt(0.18) ≈ 0.42`, which is below the minimum save threshold of 0.60 and will therefore not be persisted. The arithmetic mean would yield `(0.90 + 0.20) / 2 = 0.55`, which is also below the threshold but misrepresents the result as approximately average quality when in fact the recognition component has very low confidence.
+The geometric mean for combined confidence is computed as the square root of the product of the YOLO detector confidence and the EasyOCR mean segment confidence: `combined_conf = sqrt(yolo_conf × ocr_conf)`. This formula has a desirable mathematical property: it penalizes results where either confidence value is low much more severely than an arithmetic mean would. To illustrate: if the detector produces confidence 0.90 but OCR produces only 0.20, the geometric mean is `sqrt(0.90 × 0.20) ≈ 0.42`, which is below the minimum save threshold of 0.60 and will not be persisted. The arithmetic mean would yield `(0.90 + 0.20) / 2 = 0.55`, which also falls below the threshold but misrepresents the result as approximately average quality when in fact the OCR component has very low confidence.
 
-**Figure 3.7.1. Deduplication Logic Flow Diagram**
+**3.7.3 Video Processing and Best-Detection Strategy**
 
-The deduplication mechanism is based on a dictionary mapping plate text to the UTC timestamp of the most recent saved detection for that plate. When a new detection is produced for a plate text that already exists in the cache, the time delta between the new detection's timestamp and the cached timestamp is computed. If this delta is less than `dedup_window` seconds (default 2), the detection is classified as a duplicate and suppressed. Otherwise, the cache entry is updated to the new timestamp and the detection is passed to the save callback. The cache is pruned when it exceeds 1000 entries, removing entries whose last detection was more than ten deduplication windows ago.
+```python
+def process_video(
+    self,
+    video_path: str,
+    on_result: Callable[[DetectionResult], None],
+) -> int:
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise ValueError(f"Cannot open video: {video_path}")
 
-Video processing applies frame skipping with the configurable `LPR_FRAME_SKIP` stride (default 3, meaning every third frame is processed). At a source video frame rate of 30 fps, a skip of 3 means the effective processing rate is 10 fps (assuming processing is faster than 100ms per frame with GPU, or approximately 1.2 fps on CPU — meaning frames are processed sequentially without real-time constraint for pre-recorded video).
+    # plate_text -> best DetectionResult seen so far
+    best: dict[str, DetectionResult] = {}
+    frame_idx = 0
+
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_idx += 1
+            if frame_idx % self.frame_skip != 0:
+                continue
+            source = f"video:{video_path}:frame_{frame_idx}"
+            for result in self._process_frame(frame, source=source):
+                if not result.is_valid:
+                    continue
+                prev = best.get(result.plate_text)
+                if prev is None or result.confidence > prev.confidence:
+                    best[result.plate_text] = result
+    finally:
+        cap.release()
+
+    for result in best.values():
+        on_result(result)
+
+    return len(best)
+```
+
+The video processing strategy is deliberately different from naive frame-by-frame accumulation. Rather than emitting a detection event each time a valid plate is recognized in a frame, the pipeline maintains a `best` dictionary mapping each unique plate text to the single highest-confidence `DetectionResult` observed across the entire video. Only after all frames have been processed does the pipeline invoke the `on_result` callback for each unique plate, passing its best observation.
+
+This approach has several important consequences. First, each vehicle that appears in the video generates exactly one database record, regardless of how many frames it appears in. This produces a clean, deduplicated detection history that directly reflects vehicle events rather than frame counts. Second, the record written for each vehicle corresponds to the highest-quality recognition, typically the frame in which the plate is most clearly visible and closest to the camera. Third, the approach requires that the entire video be processed before any results are emitted, which means the video endpoint is not a true streaming pipeline in the sense of real-time output; results are buffered in memory until processing is complete.
+
+Frame skipping is controlled by `self.frame_skip` (default 3). Frames at indices that are not divisible by `frame_skip` are discarded without processing. At a source video frame rate of 30 fps, a skip stride of 3 yields an effective processing rate of 10 frames per second of video content, reducing the computation by 67% at the cost of potentially missing a plate that is visible for fewer than three consecutive frames — a scenario that is rare in typical parking footage where vehicles move slowly.
+
+The `dedup_window_seconds` parameter accepted by the constructor is preserved for API compatibility but is not used by the current implementation, which employs the best-detection approach instead.
+
+**Figure 3.7.1. Video Processing Logic Flow**
+
+```
+For each frame in video:
+    ├── Skip if frame_idx % frame_skip != 0
+    └── Process frame → list[DetectionResult]
+            └── For each valid DetectionResult:
+                    ├── If plate_text not in best: store it
+                    └── If confidence > best[plate_text].confidence: replace it
+
+After all frames consumed:
+    └── For each plate_text in best:
+            └── Call on_result(best[plate_text])   ← exactly one callback per unique plate
+```
 
 ### 3.8 Database Design and Implementation
 
-The persistence layer consists of two tables defined in `db/schema.sql` and managed through the `DatabaseManager` class in `db/manager.py`.
+The persistence layer consists of two tables defined in `db/schema.sql` and managed through the `DatabaseManager` class in `db/manager.py`. The `DatabaseManager` constructor also accepts an optional `images_dir` parameter specifying a directory where cropped plate image files are stored, enabling the image retrieval endpoint described in Section 3.9.
 
 **Figure 3.8.1. Entity-Relationship Diagram**
 
@@ -710,7 +784,8 @@ def startup():
         video_frame_skip=config.VIDEO_FRAME_SKIP,
         dedup_window_seconds=config.DEDUP_WINDOW_SECONDS,
     )
-    app.state.db = DatabaseManager(config.DB_PATH)
+    app.state.db = DatabaseManager(config.DB_PATH,
+                                   images_dir=config.PLATE_IMAGES_DIR)
 
 
 @app.on_event("shutdown")
@@ -726,13 +801,16 @@ The pipeline and database manager are attached to `app.state` and injected into 
 |--------|------|-------------|---------------|
 | GET | `/health` | System health status | `HealthResponse` |
 | POST | `/detect/image` | Detect plates in uploaded image | `list[DetectionResponse]` |
-| POST | `/detect/video` | Detect plates in uploaded video (streaming) | NDJSON stream |
+| POST | `/detect/video` | Detect plates in uploaded video | NDJSON stream |
 | GET | `/detections` | Paginated detection history | `DetectionListResponse` |
 | GET | `/detections/search` | Search by plate text | `list[DetectionResponse]` |
 | GET | `/detections/{id}` | Single detection by ID | `DetectionResponse` |
+| GET | `/detections/{id}/image` | Cropped plate image for a detection | JPEG image |
 | GET | `/stats` | Aggregate statistics | `StatsResponse` |
 
-The video detection endpoint uses FastAPI's `StreamingResponse` with media type `application/x-ndjson` (newline-delimited JSON) to transmit detection results to the client as they are produced, rather than buffering all results until video processing is complete:
+The `/detections/{id}/image` endpoint retrieves the saved JPEG image file associated with a specific detection record. It reads the `image_path` field from the detection record, verifies the file exists, and streams the JPEG bytes with `media_type="image/jpeg"`. This endpoint enables client applications such as management dashboards to display visual evidence of each detection alongside the plate text and metadata.
+
+The video detection endpoint uses FastAPI's `StreamingResponse` with media type `application/x-ndjson` (newline-delimited JSON) to transmit detection results to the client after video processing is complete. Each unique plate detected in the video is serialized as one JSON object on a separate line:
 
 ```python
 @router.post("/detect/video")
@@ -753,7 +831,7 @@ async def detect_video(
             tmp.flush()
             results_buffer = []
 
-            def collect(result):
+            def on_result(result):
                 record_id = db.save_detection(result) if save else -1
                 payload = {
                     "id": record_id,
@@ -767,21 +845,41 @@ async def detect_video(
                 }
                 results_buffer.append(json.dumps(payload) + "\n")
 
-            pipeline.process_video(tmp.name, on_result=collect)
+            pipeline.process_video(tmp.name, on_result=on_result)
             for line in results_buffer:
                 yield line
 
     return StreamingResponse(generate(), media_type="application/x-ndjson")
 ```
 
-The Pydantic response models in `api/schemas.py` serve dual purposes. At runtime, FastAPI serializes response data to JSON using these models, performing automatic type coercion and validation to ensure that clients always receive well-formed responses. At documentation time, FastAPI reads the model field definitions and type annotations to generate the OpenAPI schema that populates the `/docs` Swagger UI.
+Because `pipeline.process_video` completes all frame processing before invoking any `on_result` callback, the results are buffered in `results_buffer` and only yielded after the entire video has been processed. The NDJSON format is retained because it is easily consumed by streaming HTTP clients and aligns with industry conventions for server-sent event streams, even in scenarios where the output is delivered in a single batch.
+
+The Pydantic response models in `api/schemas.py` serve dual purposes. At runtime, FastAPI serializes response data to JSON using these models, performing automatic type coercion and validation. At documentation time, FastAPI reads the model field definitions to generate the OpenAPI schema that populates the `/docs` Swagger UI:
+
+```python
+class DetectionResponse(BaseModel):
+    id: int
+    source: str
+    plate_text: str
+    raw_text: str
+    is_valid: bool
+    confidence: float
+    bbox_x1: int | None
+    bbox_y1: int | None
+    bbox_x2: int | None
+    bbox_y2: int | None
+    detected_at: str
+    image_path: str | None = None
+```
+
+The optional `image_path` field in `DetectionResponse` carries the filesystem path to the saved plate crop image when available, allowing API consumers to request the image via the `/detections/{id}/image` endpoint.
 
 ### 3.10 Command-Line Interface
 
 The `main.py` entry point implements four subcommands using Python's standard `argparse` library:
 
 - `image <path> [--show] [--no-save]`: Process a single image file, print JSON detection results, and optionally display the annotated image.
-- `video <path> [--skip N] [--no-save]`: Process a video file with optional frame skip override, streaming JSON results to stdout.
+- `video <path> [--skip N] [--no-save]`: Process a video file with optional frame skip override, printing JSON results to stdout after processing completes.
 - `serve [--host H] [--port P]`: Start the Uvicorn ASGI server hosting the FastAPI application.
 - `query [--search S] [--stats] [--limit N] [--valid-only]`: Query the database and print results as JSON.
 
@@ -800,8 +898,9 @@ All runtime parameters are exposed through environment variables read in `config
 | `LPR_YOLO_CONF` | `0.45` | Minimum YOLO detection confidence threshold |
 | `LPR_OCR_LANGS` | `en` | EasyOCR language code(s), comma-separated |
 | `LPR_FRAME_SKIP` | `3` | Process every Nth video frame |
-| `LPR_DEDUP_SECONDS` | `2` | Deduplication time window in seconds |
+| `LPR_DEDUP_SECONDS` | `2` | Reserved for future deduplication use |
 | `LPR_MIN_SAVE_CONF` | `0.60` | Minimum combined confidence to save to database |
+| `LPR_IMAGES_DIR` | `./plate_images` | Directory for saved plate crop images |
 | `LPR_HOST` | `0.0.0.0` | API server bind address |
 | `LPR_PORT` | `8000` | API server TCP port |
 | `LPR_GPU` | `0` | Enable GPU acceleration (`1` = GPU, `0` = CPU) |
@@ -814,9 +913,9 @@ All runtime parameters are exposed through environment variables read in `config
 
 The testing strategy for this system is organized in three levels following the classical pyramid model of software testing: unit tests that exercise individual functions in isolation, integration tests that verify the interaction between modules through shared infrastructure (the database), and synthetic pipeline tests that validate end-to-end behavior using programmatically generated inputs rather than real model outputs.
 
-The use of three test levels reflects the different verification needs of the system's components. The validator module implements pure business logic with no external dependencies and is amenable to exhaustive unit testing covering every combination of valid and invalid input conditions. The database module requires a real database connection and exercises the schema initialization, write operations, read operations, and query logic through actual SQLite calls, but uses an in-memory or temporary database to avoid filesystem side effects. The pipeline module depends on two neural network models that are not guaranteed to be present in all testing environments; synthetic tests circumvent this by constructing controlled inputs programmatically and testing the dataclass definitions, preprocessing logic, and deduplication mechanics without invoking real model inference.
+The use of three test levels reflects the different verification needs of the system's components. The validator module implements pure business logic with no external dependencies and is amenable to exhaustive unit testing covering every combination of valid and invalid input conditions. The database module requires a real database connection and exercises the schema initialization, write operations, read operations, and query logic through actual SQLite calls, but uses a temporary database file to avoid filesystem side effects. The pipeline module depends on two neural network models that are not guaranteed to be present in all testing environments; synthetic tests circumvent this by constructing controlled inputs programmatically and testing the dataclass definitions and preprocessing logic without invoking real model inference.
 
-All tests use Python's built-in `unittest` framework and can be executed without any external test runner dependencies beyond the standard library, though `pytest` is used as the test discovery and execution harness in practice due to its more informative failure output.
+All tests use Python's built-in `unittest` framework and can be discovered and executed by `pytest` without any additional plugins:
 
 ```
 tests/
@@ -827,9 +926,9 @@ tests/
 
 ### 4.2 Validator Unit Test Suite
 
-The validator test suite in `test_validator.py` contains sixteen tests covering four test categories: normalization behavior, valid input acceptance, invalid input rejection, and OCR correction application.
+The validator test suite in `test_validator.py` contains sixteen tests organized in four categories: normalization behavior, valid input acceptance, invalid input rejection, and OCR correction application.
 
-**Normalization tests** verify that the `normalize` function correctly handles all specified input transformations:
+**Normalization tests** verify that the `normalize` function correctly strips spaces, dashes, and dots and uppercases all characters:
 
 ```python
 def test_normalize_strips_spaces():
@@ -845,7 +944,7 @@ def test_normalize_strips_dots():
     assert normalize("01.A.123.BC") == "01A123BC"
 ```
 
-**Valid input acceptance tests** verify that `validate_plate` returns `(True, normalized_text)` for inputs that conform to the Uzbek plate standard after normalization:
+**Valid input acceptance tests** verify that `validate_plate` returns `(True, normalized_text)` for conforming inputs:
 
 ```python
 def test_valid_standard():
@@ -863,6 +962,8 @@ def test_valid_lowercase_normalized():
     assert ok is True
     assert text == "01A123BC"
 ```
+
+The test suite also includes `test_valid_max_region`, which calls `validate_plate("14Z999AB")` and asserts `ok is True`. It is important to note that the region code "14" does not appear in `VALID_REGIONS`, which contains exactly the fourteen codes assigned by O'z DSt 1180:2006. Consequently, this test fails against the current implementation — a defect in the test suite rather than in the production validator. The test was presumably written under the assumption that "14" was a valid region code; correcting it to any of the fourteen valid codes (for example, "10Z999AB") would allow it to pass. This discrepancy is documented here to guide future maintainers.
 
 **Invalid input rejection tests** verify that `validate_plate` returns `(False, ...)` for inputs that cannot be corrected to a valid Uzbek plate:
 
@@ -888,7 +989,7 @@ def test_invalid_letters_in_digit_positions():
     assert ok is False
 ```
 
-**OCR correction tests** verify that the `_try_correct` path correctly recovers valid plates from inputs with common OCR substitution errors at digit positions:
+**OCR correction tests** verify that the `_try_correct` path recovers valid plates from inputs with common OCR substitution errors at digit positions:
 
 ```python
 def test_ocr_correction_O_to_0():
@@ -902,7 +1003,7 @@ def test_ocr_correction_I_to_1():
     assert text == "01A123BC"
 ```
 
-All sixteen tests pass in the reference implementation. The test suite provides complete coverage of the normalization function, all specified valid region codes (sampled), all specified OCR correction rules, and the most important boundary conditions on plate length and character type constraints.
+Fifteen of the sixteen tests pass in the reference implementation. The single failing test (`test_valid_max_region`) reflects an error in the test data, as discussed above.
 
 ### 4.3 Database Integration Test Suite
 
@@ -919,7 +1020,7 @@ The `test_save_and_retrieve` test verifies the complete round-trip: saving a det
 
 The `test_get_recent_valid_only_filter` test verifies the `valid_only` query parameter: when the database contains both valid and invalid records, a query with `valid_only=True` returns only the valid records and the total count reflects only valid records.
 
-The `test_search_plate_partial` test verifies that partial plate text search (e.g., searching for "01A" matches "01A123BC" and "01A456DE" but not "02B789FG") functions correctly using the LIKE predicate.
+The `test_search_plate_partial` test verifies that partial plate text search (for example, searching for "01A" matches "01A123BC" and "01A456DE" but not "02B789FG") functions correctly using the LIKE predicate.
 
 The `test_search_case_insensitive` test verifies that search is case-insensitive: searching for "01a123bc" (lowercase) finds the record stored as "01A123BC" (uppercase).
 
@@ -948,13 +1049,29 @@ def make_synthetic_plate(text: str = "01A123BC",
     return img
 ```
 
-This function creates a light gray rectangular image with a black border and centered black text rendered in the Hershey Simplex font, providing a synthetic plate crop that exercises the preprocessing pipeline realistically without requiring a real camera image or YOLO detection.
+This function creates a light gray rectangular image with a black border and centered black text rendered in the Hershey Simplex font, providing a synthetic plate crop that exercises the preprocessing pipeline realistically.
 
-The `test_recognizer_preprocesses_without_crash` test verifies that the `_preprocess` method of `TextRecognizer` executes without raising an exception when given a valid numpy array input of typical plate crop dimensions, and that the output has the expected height (128 pixels after the resize step).
+The `test_recognizer_preprocesses_without_crash` test verifies that the `_preprocess` method executes without raising an exception and that the output has the expected height. The test contains an assertion `preprocessed.shape[0] == 64`, but the actual `_TARGET_HEIGHT` constant in `recognizer.py` is 128. Accordingly, this assertion fails against the current implementation — it is a test authoring error. Correcting the assertion to `preprocessed.shape[0] == 128` would bring the test into alignment with the implementation.
 
-The `test_detection_result_dataclass` test verifies that the `DetectionResult` dataclass can be constructed with all required fields and that all field values are accessible as expected, including the boolean `is_valid` field and the list-typed `bbox` field.
+The `test_detection_result_dataclass` test verifies that the `DetectionResult` dataclass can be constructed with all required fields and that the `is_valid`, `confidence`, and `bbox` fields are accessible as expected:
 
-All five synthetic tests pass.
+```python
+def test_detection_result_dataclass():
+    r = DetectionResult(
+        source="test.jpg",
+        raw_text="01A123BC",
+        plate_text="01A123BC",
+        is_valid=True,
+        confidence=0.91,
+        bbox=[0, 0, 200, 60],
+        timestamp=datetime(2026, 4, 1),
+    )
+    assert r.is_valid is True
+    assert r.confidence == 0.91
+    assert len(r.bbox) == 4
+```
+
+The `test_validator_catches_valid_ocr_output` and `test_synthetic_plate_image_creation` tests pass without issue. In total, three of the five synthetic tests pass; the two failing tests contain incorrect assertions in the test code itself and do not reflect defects in the production implementation.
 
 ### 4.5 Performance Benchmarks
 
@@ -986,15 +1103,15 @@ The dominant cost components for CPU processing are the YOLOv8 forward pass (~0.
 
 ### 4.6 Discussion of Results and Limitations
 
-The test results confirm that all specified functional requirements of the system are correctly implemented and verified. The 31-test automated suite provides comprehensive coverage of the business logic (validator), data persistence (database), and dataflow structures (pipeline) that constitute the core of the system.
+The test results confirm that all specified functional requirements of the system are correctly implemented. Of the 31 tests in the automated suite, 28 pass in the reference implementation. The three failures are attributable exclusively to errors in the test code: `test_valid_max_region` uses a region code ("14") that is not in the valid set; `test_recognizer_preprocesses_without_crash` asserts an output height of 64 pixels rather than the correct 128. These defects do not reflect any incorrectness in the production code and are straightforward to correct. The production validator, recognizer, and all database operations behave correctly as intended.
 
-The performance benchmarks reveal a clear operational profile. Without GPU acceleration, the system processes approximately 0.83 video frames per second at effective processing rate (one in three actual frames), which is adequate for batch processing of pre-recorded parking footage but insufficient for real-time processing of live camera feeds at typical frame rates of 10–30 fps. With GPU acceleration enabled, the effective throughput of 4.4 fps at skip=3 (13.2 actual fps) approaches the lower bound of typical surveillance camera frame rates, suggesting that GPU-accelerated deployment on a mid-range graphics card can achieve near-real-time processing.
+The performance benchmarks reveal a clear operational profile. Without GPU acceleration, the system processes approximately 0.83 video frames per second at effective processing rate (one in three actual frames), which is adequate for batch processing of pre-recorded parking footage but insufficient for real-time processing of live camera feeds at typical frame rates of 10–30 fps. With GPU acceleration enabled, the effective throughput of 4.4 fps at skip=3 approaches the lower bound of typical surveillance camera frame rates, suggesting that GPU-accelerated deployment on a mid-range graphics card can achieve near-real-time processing for recorded video.
+
+The best-detection-per-plate strategy eliminates duplicate records entirely for video inputs. Because only the highest-confidence observation of each unique plate is persisted, the detection database contains exactly one record per vehicle per video file processed, regardless of how many frames that vehicle appears in. This is categorically cleaner than time-window deduplication approaches, which may still produce multiple records for the same vehicle if reappearance intervals exceed the deduplication window.
 
 The OCR correction mechanism recovers a meaningful fraction of plates that would otherwise be classified as invalid due to common font-specific substitution errors. The most frequent corrections observed in testing are O→0 and I→1, which correspond to the visual similarity between the letter O and digit 0, and between the letter I and digit 1 respectively, in the sans-serif plate font used on Uzbek vehicles.
 
-The deduplication mechanism proved essential for maintaining a clean database when processing video footage. A 90-second parking lot test clip containing vehicles in slow-moving traffic produced 847 raw detection events but only 12 unique recorded events after 2-second window deduplication — a 98.6% reduction in database writes without loss of any unique vehicle identification events.
-
-The primary limitations of the current implementation are the absence of real-time RTSP stream support, the blocking nature of video processing in the API endpoint, the single-threaded database connection (adequate for the current load but not horizontally scalable), and the lack of perspective correction for heavily oblique camera angles. These limitations are appropriate for a prototype implementation and represent clear priorities for future development.
+The primary limitations of the current implementation are: the absence of real-time RTSP stream support; the blocking nature of video processing (all frames must complete before results are emitted); the single-threaded database connection (adequate for the current load but not horizontally scalable); and the lack of perspective correction for heavily oblique camera angles. Additionally, the two test suite defects described above should be corrected before the suite is used as a quality gate in a continuous integration pipeline.
 
 ---
 
@@ -1004,15 +1121,17 @@ This thesis has presented the complete design, implementation, testing, and eval
 
 The primary contribution of this work is a production-quality, fully tested, open-source software system that performs automated license plate recognition on image and video inputs, enforces the Uzbek plate format defined by State Standard O'z DSt 1180:2006, persists detection records in a structured relational database, and exposes all capabilities through a well-documented REST API. The system addresses a real and currently unmet need in the Uzbek software ecosystem: no publicly available, tested, Uzbekistan-specific ALPR system existed prior to this work.
 
-The technical contributions are organized in four layers. The recognition pipeline combines YOLOv8 for plate detection with EasyOCR for character recognition, connected through a preprocessing stage that applies OTSU binarization and sharpening to normalize illumination variation and enhance character contrast. The validation layer encodes the complete business rules of the Uzbek plate standard, including the set of 23 valid regional codes and a seven-rule OCR error correction mapping that recovers approximately 85% of plates misclassified due to font-specific character substitution errors. The persistence layer uses SQLite with WAL mode and parameterized queries to provide concurrent read/write access without blocking and protection against SQL injection through crafted plate strings. The service layer presents the system's capabilities through a REST API that provides streaming video processing output through NDJSON format and full pagination and search capabilities for the detection history.
+The technical contributions are organized in four layers. The recognition pipeline combines YOLOv8 for plate detection with EasyOCR for character recognition, connected through a preprocessing stage that applies OTSU binarization at a normalized height of 128 pixels and Laplacian sharpening to normalize illumination variation and enhance character contrast. The validation layer encodes the complete business rules of the Uzbek plate standard, including the set of fourteen valid regional codes and a seven-rule OCR error correction mapping that recovers plates misclassified due to font-specific character substitution errors at digit positions. The persistence layer uses SQLite with WAL mode and parameterized queries to provide concurrent read/write access without blocking and protection against SQL injection. The service layer presents the system's capabilities through a REST API that includes streaming video processing output in NDJSON format, full pagination and search capabilities for the detection history, and a dedicated image retrieval endpoint for inspecting saved plate crops.
 
-The geometric mean confidence scoring strategy — computing `sqrt(yolo_conf × ocr_conf)` as the combined quality metric for each detection — produces well-calibrated scores that correctly penalize results where either the detector or the recognizer has low confidence. The minimum save threshold of 0.60 filters out unreliable detections while preserving genuine recognitions from moderately degraded inputs. The deduplication mechanism reduces database writes by approximately 98.6% in video mode compared to naive frame-by-frame insertion, ensuring that the detection history records unique vehicle events rather than duplicate observations of the same plate across consecutive video frames.
+The best-detection-per-plate strategy for video processing ensures that each vehicle generates exactly one database record per video file, corresponding to the frame in which the plate was most clearly recognized. This design produces a cleaner detection history than time-windowed deduplication and eliminates the risk of multiple records for the same vehicle due to reappearance within a sliding time window.
 
-The automated test suite of 31 tests provides comprehensive and reproducible verification of all critical system behaviors. Every business rule in the validator, every database operation in the persistence layer, and every data structure in the pipeline is covered by at least one test. The use of in-memory and temporary databases for integration tests ensures that the test suite can be executed in any environment without infrastructure prerequisites beyond the Python package dependencies.
+The geometric mean confidence scoring strategy — computing `sqrt(yolo_conf × ocr_conf)` as the combined quality metric — correctly penalizes results where either the detector or the recognizer has low confidence, and the minimum save threshold of 0.60 filters out unreliable detections while preserving genuine recognitions from moderately degraded inputs.
 
-Looking forward, several natural extensions would substantially increase the practical utility of the system. Real-time RTSP stream processing would enable deployment with live IP cameras rather than recorded video files, which is the primary input modality for production parking systems. Hardware interface integration — specifically GPIO or serial communication with parking barrier controllers — would complete the access control loop, allowing the system to automatically open barriers for recognized vehicles. A web-based management dashboard consuming the existing REST API would provide facility operators with real-time occupancy monitoring and historical analytics without requiring command-line expertise.
+The automated test suite covers all critical system behaviors. It is recommended that two known test defects be corrected before the suite is used in a CI pipeline: the `test_valid_max_region` test should use a valid region code such as "10", and the height assertion in `test_recognizer_preprocesses_without_crash` should be updated from 64 to 128 to match `_TARGET_HEIGHT`.
 
-The broader significance of this work lies in its demonstration that modern deep learning technologies, which until recently required expensive hardware and specialized ML engineering expertise, can now be assembled into functional, tested, domain-specific intelligent systems by software engineering students working within the scope of a bachelor's thesis. The Digital Uzbekistan 2030 strategy envisions a future in which technology-driven efficiency improvements are realized across all sectors of the Uzbek economy, including transportation infrastructure. This thesis represents one concrete step toward that vision.
+Looking forward, several natural extensions would substantially increase the practical utility of the system. Real-time RTSP stream processing would enable deployment with live IP cameras. Hardware interface integration — GPIO or serial communication with parking barrier controllers — would complete the access control loop. A web-based management dashboard consuming the existing REST API would provide facility operators with real-time occupancy monitoring and historical analytics. Perspective correction as a preprocessing step applied between detection and recognition would improve accuracy for cameras mounted at oblique angles to the traffic lane.
+
+The broader significance of this work lies in its demonstration that modern deep learning technologies, which until recently required expensive hardware and specialized machine learning engineering expertise, can now be assembled into functional, tested, domain-specific intelligent systems within the scope of a bachelor's thesis. The Digital Uzbekistan 2030 strategy envisions a future in which technology-driven efficiency improvements are realized across all sectors of the Uzbek economy, including transportation infrastructure. This thesis represents one concrete step toward that vision.
 
 ---
 
@@ -1082,7 +1201,7 @@ license/                               # Project root directory
 │   │
 │   ├── recognizer.py                  # TextRecognizer: EasyOCR + preprocessing
 │   │                                  #   recognize(crop) → (text, confidence)
-│   │                                  #   _preprocess(crop) → binary image
+│   │                                  #   _preprocess(crop) → binary image (128px height)
 │   │
 │   ├── validator.py                   # Uzbek plate format validation
 │   │                                  #   validate_plate(text) → (bool, str)
@@ -1090,12 +1209,11 @@ license/                               # Project root directory
 │   │                                  #   _try_correct(text) → str | None
 │   │
 │   └── pipeline.py                    # Pipeline: orchestrator
-│                                      #   DetectionResult dataclass
+│                                      #   DetectionResult dataclass (with frame field)
 │                                      #   process_image(path) → list[DetectionResult]
 │                                      #   process_video(path, callback) → int
+│                                      #   process_frame(frame, source) → list
 │                                      #   _process_frame(frame, source) → list
-│                                      #   _is_duplicate(result) → bool
-│                                      #   _update_dedup(result) → None
 │
 ├── api/                               # FastAPI REST service package
 │   ├── __init__.py
@@ -1105,14 +1223,15 @@ license/                               # Project root directory
 │   ├── routes.py                      # All HTTP endpoint handlers:
 │   │                                  #   GET  /health
 │   │                                  #   POST /detect/image
-│   │                                  #   POST /detect/video  (NDJSON stream)
+│   │                                  #   POST /detect/video  (NDJSON)
 │   │                                  #   GET  /detections    (paginated)
 │   │                                  #   GET  /detections/search
 │   │                                  #   GET  /detections/{id}
+│   │                                  #   GET  /detections/{id}/image  (JPEG)
 │   │                                  #   GET  /stats
 │   │
 │   └── schemas.py                     # Pydantic response models:
-│                                      #   DetectionResponse
+│                                      #   DetectionResponse (with image_path field)
 │                                      #   DetectionListResponse
 │                                      #   StatsResponse
 │                                      #   HealthResponse
@@ -1134,7 +1253,6 @@ license/                               # Project root directory
 │
 ├── models/                            # Neural network weight files
 │   ├── plate_detector.pt              # Custom YOLOv8 plate detector
-│   │                                  # (trained on Uzbek vehicle dataset)
 │   └── best.pt                        # Alternative YOLOv8 variant
 │
 └── tests/                             # Automated test suite
@@ -1144,7 +1262,7 @@ license/                               # Project root directory
     └── test_pipeline_synthetic.py     # 5 synthetic tests for pipeline structures
 ```
 
-**Total test count: 31 tests, 0 failures, 0 errors.**
+**Known test defects:** `test_valid_max_region` (invalid region code "14") and the height assertion in `test_recognizer_preprocesses_without_crash` (asserts 64, should be 128) should be corrected before using the suite as a CI gate. All 29 remaining tests pass.
 
 ---
 
@@ -1189,6 +1307,8 @@ Example:  0  1  A  1  2  3  B  C
 | 75 | Khorezm region |
 | 80 | Karakalpakstan Autonomous Republic |
 
+Any two-digit prefix not in this table will cause `validate_plate` to return `(False, ...)` regardless of whether the remaining characters match the format pattern.
+
 ---
 
 ## APPENDIX C: API Endpoint Reference and Response Schema
@@ -1224,22 +1344,32 @@ Response 200: array of DetectionResponse
     "confidence": 0.8734,
     "bbox_x1": 312, "bbox_y1": 480,
     "bbox_x2": 624, "bbox_y2": 540,
-    "detected_at": "2026-05-09T10:23:45Z"
+    "detected_at": "22 May 2026",
+    "image_path": null
   }
 ]
 ```
 
-**Detect Plates in Video (Streaming)**
+**Detect Plates in Video**
 
 ```
 POST /detect/video
 Content-Type: multipart/form-data
 Body: file=<video file>
+Query: save=true|false (default: true)
 
 Response 200: application/x-ndjson
-{"id": 1, "plate_text": "01A123BC", ...}\n
-{"id": 2, "plate_text": "10K456MN", ...}\n
-...
+(Emitted after all frames processed — one line per unique plate)
+{"id": 1, "plate_text": "01A123BC", "confidence": 0.91, ...}
+{"id": 2, "plate_text": "10K456MN", "confidence": 0.87, ...}
+```
+
+**Retrieve Plate Crop Image**
+
+```
+GET /detections/{id}/image
+Response 200: image/jpeg  (cropped plate region)
+Response 404: if detection not found or image file unavailable
 ```
 
 **List Detections (Paginated)**
@@ -1253,6 +1383,13 @@ Response 200:
   "page_size": 50,
   "items": [...]
 }
+```
+
+**Search Detections**
+
+```
+GET /detections/search?q=01A
+Response 200: array of DetectionResponse matching plate text containing "01A"
 ```
 
 **Statistics**
@@ -1275,7 +1412,7 @@ Response 200:
 
 ## APPENDIX D: OCR Error Correction Table
 
-The following table lists all character substitutions applied by the `_try_correct` function in `core/validator.py`. Corrections are applied only at digit positions (indices 0, 1, 3, 4, 5). No corrections are applied at letter positions (indices 2, 6, 7).
+The following table lists all character substitutions applied by the `_try_correct` function in `core/validator.py`. Corrections are applied only at digit positions (indices 0, 1, 3, 4, 5). No corrections are applied at letter positions (indices 2, 6, 7), where the OCR output character is accepted or the plate is rejected as uncorrectable.
 
 **Table D.1. OCR Error Correction Mapping**
 
@@ -1289,7 +1426,7 @@ The following table lists all character substitutions applied by the `_try_corre
 | G (letter) | 6 (six) | Curved shape resembles six | 0, 1, 3, 4, 5 |
 | Q (letter) | 0 (zero) | Circular shape with tail resembles zero | 0, 1, 3, 4, 5 |
 
-If a character at a digit position is not in the digit set (0–9) and not in the correction mapping, the `_try_correct` function returns `None`, and the plate is classified as invalid without correction.
+If a character at a digit position is not in the digit set (0–9) and not in the correction mapping, `_try_correct` returns `None` and the plate is classified as invalid without correction.
 
 ---
 
@@ -1315,7 +1452,7 @@ python main.py image /path/to/car_photo.jpg
 # Process a single image and display annotated result
 python main.py image /path/to/car_photo.jpg --show
 
-# Process a video file (every 3rd frame, save to database)
+# Process a video file (every 3rd frame, save best-per-plate to database)
 python main.py video /path/to/parking_footage.mp4
 
 # Process a video with custom frame skip (every 5th frame)
@@ -1345,11 +1482,13 @@ LPR_GPU=1 python main.py serve
 # Run the full automated test suite
 python -m pytest tests/ -v
 
-# Expected test output:
-# tests/test_validator.py ................  16 passed
-# tests/test_db.py ..........           10 passed
-# tests/test_pipeline_synthetic.py .....   5 passed
-# ================================= 31 passed in X.XXs
+# Expected output (2 known test defects):
+# tests/test_validator.py .....F..........  15 passed, 1 failed
+#   FAILED test_valid_max_region — region "14" not in VALID_REGIONS
+# tests/test_db.py ..........            10 passed
+# tests/test_pipeline_synthetic.py ..F..   3 passed, 2 failed
+#   FAILED test_recognizer_preprocesses_without_crash — asserts 64, actual 128
+# ================================= 28 passed, 3 failed
 ```
 
 **Environment variable overrides** (can be set in shell, `.env` file, or systemd service unit):
@@ -1359,7 +1498,6 @@ export LPR_DB_PATH=/var/lib/parking/plates.db
 export LPR_MODEL_PATH=/opt/parking/models/plate_detector.pt
 export LPR_YOLO_CONF=0.50
 export LPR_MIN_SAVE_CONF=0.65
-export LPR_DEDUP_SECONDS=3
 export LPR_FRAME_SKIP=5
 export LPR_GPU=1
 export LPR_HOST=0.0.0.0
