@@ -14,7 +14,10 @@
       "Bash(python3 -c \"import cv2; print\\('cv2 OK', cv2.__version__\\)\")",
       "Bash(LPR_MODEL_PATH=models/best.pt python3 main.py video video2.MOV --no-save)",
       "Bash(python3 -c ' *)",
-      "Bash(LPR_MODEL_PATH=models/best.pt python3 main.py video video1.mp4 --no-save)"
+      "Bash(LPR_MODEL_PATH=models/best.pt python3 main.py video video1.mp4 --no-save)",
+      "Bash(pip install *)",
+      "Bash(python3 -c \"import docx; print\\('OK'\\)\")",
+      "Bash(python3 *)"
     ]
   }
 }

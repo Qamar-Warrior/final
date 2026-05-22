@@ -37,7 +37,7 @@ def startup():
         video_frame_skip=config.VIDEO_FRAME_SKIP,
         dedup_window_seconds=config.DEDUP_WINDOW_SECONDS,
     )
-    app.state.db = DatabaseManager(config.DB_PATH)
+    app.state.db = DatabaseManager(config.DB_PATH, images_dir=config.PLATE_IMAGES_DIR)
 
 
 @app.on_event("shutdown")

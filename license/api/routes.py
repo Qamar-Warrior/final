@@ -75,7 +75,7 @@ async def detect_image(
             "bbox_y1": result.bbox[1] if result.bbox else None,
             "bbox_x2": result.bbox[2] if result.bbox else None,
             "bbox_y2": result.bbox[3] if result.bbox else None,
-            "detected_at": result.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "detected_at": result.timestamp.strftime("%d %B %Y"),
         })
 
     return response_items
@@ -112,7 +112,7 @@ async def detect_video(
                     "bbox_y1": result.bbox[1] if result.bbox else None,
                     "bbox_x2": result.bbox[2] if result.bbox else None,
                     "bbox_y2": result.bbox[3] if result.bbox else None,
-                    "detected_at": result.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "detected_at": result.timestamp.strftime("%d %B %Y"),
                 }
                 return json.dumps(payload) + "\n"
 
@@ -158,6 +158,22 @@ def get_detection(record_id: int, db=Depends(_db)):
     if not row:
         raise HTTPException(status_code=404, detail="Detection not found")
     return row
+
+
+@router.get("/detections/{record_id}/image")
+def get_detection_image(record_id: int, db=Depends(_db)):
+    """Return the cropped plate image for a detection."""
+    row = db.get_by_id(record_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Detection not found")
+    image_path = row.get("image_path")
+    if not image_path or not Path(image_path).exists():
+        raise HTTPException(status_code=404, detail="Image not available for this detection")
+    img = cv2.imread(image_path)
+    if img is None:
+        raise HTTPException(status_code=500, detail="Failed to read image file")
+    _, encoded = cv2.imencode(".jpg", img)
+    return StreamingResponse(io.BytesIO(encoded.tobytes()), media_type="image/jpeg")
 
 
 @router.get("/stats", response_model=StatsResponse)

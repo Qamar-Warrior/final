@@ -14,6 +14,7 @@ class DetectionResponse(BaseModel):
     bbox_x2: int | None
     bbox_y2: int | None
     detected_at: str
+    image_path: str | None = None
 
 
 class DetectionListResponse(BaseModel):

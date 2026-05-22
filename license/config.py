@@ -19,9 +19,12 @@ DEDUP_WINDOW_SECONDS = int(os.environ.get("LPR_DEDUP_SECONDS", "2"))
 # Minimum confidence to save a detection to the database (0.0 - 1.0)
 MIN_SAVE_CONFIDENCE = float(os.environ.get("LPR_MIN_SAVE_CONF", "0.60"))
 
+# Directory where cropped plate images are stored
+PLATE_IMAGES_DIR = os.environ.get("LPR_IMAGES_DIR", str(BASE_DIR / "plate_images"))
+
 # API server
 API_HOST = os.environ.get("LPR_HOST", "0.0.0.0")
 API_PORT = int(os.environ.get("LPR_PORT", "8000"))
 
 # GPU usage for EasyOCR (set to "1" to enable)
-USE_GPU = os.environ.get("LPR_GPU", "1") == "1"
+USE_GPU = os.environ.get("LPR_GPU", "0") == "1"

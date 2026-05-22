@@ -2,6 +2,8 @@ import sqlite3
 import logging
 from pathlib import Path
 
+import cv2
+
 from core.pipeline import DetectionResult
 
 logger = logging.getLogger(__name__)
@@ -15,8 +17,11 @@ class DatabaseManager:
     WAL mode is enabled for concurrent read/write (API + video ingestion).
     """
 
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str, images_dir: str | None = None):
         self.db_path = db_path
+        self.images_dir = Path(images_dir) if images_dir else None
+        if self.images_dir:
+            self.images_dir.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(
             db_path,
             check_same_thread=False,  # needed for FastAPI async context
@@ -30,6 +35,10 @@ class DatabaseManager:
             self._conn.execute("PRAGMA journal_mode=WAL")
             schema = _SCHEMA_PATH.read_text()
             self._conn.executescript(schema)
+            # Migrate existing databases that don't have image_path yet
+            cols = {row[1] for row in self._conn.execute("PRAGMA table_info(detections)")}
+            if "image_path" not in cols:
+                self._conn.execute("ALTER TABLE detections ADD COLUMN image_path TEXT")
 
     # ------------------------------------------------------------------
     # Write
@@ -53,10 +62,32 @@ class DatabaseManager:
                     int(result.is_valid),
                     result.confidence,
                     bbox[0], bbox[1], bbox[2], bbox[3],
-                    result.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    result.timestamp.strftime("%d %B %Y"),
                 ),
             )
-            return cursor.lastrowid
+            record_id = cursor.lastrowid
+
+        image_path = self._save_frame(record_id, result)
+        if image_path:
+            with self._conn:
+                self._conn.execute(
+                    "UPDATE detections SET image_path = ? WHERE id = ?",
+                    (image_path, record_id),
+                )
+
+        return record_id
+
+    def _save_frame(self, record_id: int, result: DetectionResult) -> str | None:
+        """Save the full frame to disk. Returns the file path or None."""
+        if self.images_dir is None or result.frame is None or result.frame.size == 0:
+            return None
+        filename = f"{record_id}.jpg"
+        filepath = self.images_dir / filename
+        ok = cv2.imwrite(str(filepath), result.frame)
+        if not ok:
+            logger.warning(f"Failed to write frame image to {filepath}")
+            return None
+        return str(filepath)
 
     def save_valid_plate(self, result: DetectionResult) -> int:
         """Insert a confirmed valid plate into the valid_plates table. Returns new row id."""
@@ -70,7 +101,7 @@ class DatabaseManager:
                     result.plate_text,
                     result.confidence,
                     result.source,
-                    result.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    result.timestamp.strftime("%d %B %Y"),
                 ),
             )
             return cursor.lastrowid

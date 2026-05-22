@@ -22,6 +22,7 @@ class DetectionResult:
     confidence: float         # combined YOLO + OCR confidence
     bbox: list[int]           # [x1, y1, x2, y2]
     timestamp: datetime = field(default_factory=datetime.utcnow)
+    frame: np.ndarray | None = field(default=None, repr=False)  # full BGR frame
 
 
 class Pipeline:
@@ -37,9 +38,6 @@ class Pipeline:
         self.detector = PlateDetector(model_path, confidence)
         self.recognizer = TextRecognizer(languages, gpu)
         self.frame_skip = video_frame_skip
-        self.dedup_window = dedup_window_seconds
-        # plate_text -> last_seen datetime (for video deduplication)
-        self._dedup_cache: dict[str, datetime] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -62,16 +60,16 @@ class Pipeline:
         on_result: Callable[[DetectionResult], None],
     ) -> int:
         """
-        Process a video file. Calls on_result() for each detection found.
+        Process a video file. For each unique valid plate, emits only the
+        single highest-confidence detection across the entire video.
         Returns total number of detections emitted.
-
-        Uses frame skipping and deduplication to avoid redundant writes.
         """
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             raise ValueError(f"Cannot open video: {video_path}")
 
-        total = 0
+        # plate_text -> best DetectionResult seen so far
+        best: dict[str, DetectionResult] = {}
         frame_idx = 0
 
         try:
@@ -85,18 +83,19 @@ class Pipeline:
                     continue
 
                 source = f"video:{video_path}:frame_{frame_idx}"
-                results = self._process_frame(frame, source=source)
-
-                for result in results:
-                    if self._is_duplicate(result):
+                for result in self._process_frame(frame, source=source):
+                    if not result.is_valid:
                         continue
-                    self._update_dedup(result)
-                    on_result(result)
-                    total += 1
+                    prev = best.get(result.plate_text)
+                    if prev is None or result.confidence > prev.confidence:
+                        best[result.plate_text] = result
         finally:
             cap.release()
 
-        return total
+        for result in best.values():
+            on_result(result)
+
+        return len(best)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -124,22 +123,8 @@ class Pipeline:
                 is_valid=is_valid,
                 confidence=combined_conf,
                 bbox=det['bbox'],
+                frame=frame,
             ))
 
         return results
 
-    def _is_duplicate(self, result: DetectionResult) -> bool:
-        if result.plate_text not in self._dedup_cache:
-            return False
-        delta = (result.timestamp - self._dedup_cache[result.plate_text]).total_seconds()
-        return delta < self.dedup_window
-
-    def _update_dedup(self, result: DetectionResult) -> None:
-        self._dedup_cache[result.plate_text] = result.timestamp
-        # Prune old entries to prevent unbounded growth
-        if len(self._dedup_cache) > 1000:
-            cutoff = result.timestamp.timestamp() - self.dedup_window * 10
-            self._dedup_cache = {
-                k: v for k, v in self._dedup_cache.items()
-                if v.timestamp() > cutoff
-            }

@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS detections (
     bbox_y1     INTEGER,
     bbox_x2     INTEGER,
     bbox_y2     INTEGER,
-    detected_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    detected_at TEXT    NOT NULL DEFAULT (strftime('%d %m %Y', 'now')),
+    image_path  TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_plate_text   ON detections(plate_text);
@@ -21,7 +22,7 @@ CREATE TABLE IF NOT EXISTS valid_plates (
     plate_text  TEXT    NOT NULL,
     confidence  REAL    NOT NULL,
     source      TEXT    NOT NULL,
-    detected_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    detected_at TEXT    NOT NULL DEFAULT (strftime('%d %m %Y', 'now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_vp_plate_text   ON valid_plates(plate_text);
