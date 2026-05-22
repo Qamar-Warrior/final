@@ -37,7 +37,8 @@ def _make_pipeline():
 
 def _make_db():
     from db.manager import DatabaseManager
-    return DatabaseManager(config.DB_PATH)
+    return DatabaseManager(config.DB_PATH, images_dir=config.PLATE_IMAGES_DIR)
+
 
 
 def _result_to_dict(result, record_id: int = -1) -> dict:

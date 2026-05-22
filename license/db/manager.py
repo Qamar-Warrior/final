@@ -62,7 +62,8 @@ class DatabaseManager:
                     int(result.is_valid),
                     result.confidence,
                     bbox[0], bbox[1], bbox[2], bbox[3],
-                    result.timestamp.strftime("%d %B %Y"),
+                 result.timestamp.strftime("%d %B %Y %H:%M:%S"),
+
                 ),
             )
             record_id = cursor.lastrowid
@@ -101,7 +102,8 @@ class DatabaseManager:
                     result.plate_text,
                     result.confidence,
                     result.source,
-                    result.timestamp.strftime("%d %B %Y"),
+                          result.timestamp.strftime("%d %B %Y %H:%M:%S"),
+
                 ),
             )
             return cursor.lastrowid
