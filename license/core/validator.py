@@ -66,6 +66,15 @@ def validate_plate(text: str) -> tuple[bool, str, PlateType]:
     if corrected_govt and _GOVT_RE.match(corrected_govt) and corrected_govt[:2] in VALID_REGIONS:
         return True, corrected_govt, PlateType.GOVERNMENT
 
+    # If OCR inserted one extra character anywhere (e.g. doubled a digit),
+    # try all 9 single-character deletions to recover the real 8-char plate.
+    if len(normalized) == 9:
+        for i in range(9):
+            candidate = normalized[:i] + normalized[i + 1:]
+            is_valid, plate_text, plate_type = validate_plate(candidate)
+            if is_valid:
+                return True, plate_text, plate_type
+
     return False, normalized, PlateType.UNKNOWN
 
 
@@ -91,6 +100,30 @@ def _try_correct_public(text: str) -> str | None:
             return None
 
     return ''.join(chars)
+
+
+def extract_plate_from_text(text: str) -> tuple[bool, str, PlateType]:
+    """
+    Find a valid plate within a longer OCR string.
+
+    Useful when OCR picks up plate-frame decorations alongside the number.
+    Tries a direct match first, then slides an 8-char window through the string.
+    """
+    is_valid, plate_text, plate_type = validate_plate(text)
+    if is_valid:
+        return is_valid, plate_text, plate_type
+
+    normalized = normalize(text)
+    if len(normalized) <= 9:
+        return False, normalized, PlateType.UNKNOWN
+
+    for start in range(len(normalized) - 7):
+        candidate = normalized[start:start + 8]
+        is_valid, plate_text, plate_type = validate_plate(candidate)
+        if is_valid:
+            return True, plate_text, plate_type
+
+    return False, normalized, PlateType.UNKNOWN
 
 
 def _try_correct_government(text: str) -> str | None:
