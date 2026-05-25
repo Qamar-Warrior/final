@@ -1,8 +1,18 @@
 import re
+from enum import Enum
 
-# Uzbekistan plate format: 2-digit region + 1 letter + 3 digits + 2 letters
-# Examples: 01A123BC, 10K456MN, 50Z999AB
-UZ_PLATE_RE = re.compile(r'^[0-9]{2}[A-Z][0-9]{3}[A-Z]{2}$')
+
+class PlateType(str, Enum):
+    PUBLIC = "public"          # 01Z552TB  — 2 digits + 1 letter + 3 digits + 2 letters
+    GOVERNMENT = "government"  # 01007WHA  — 2 digits + 3 digits + 3 letters
+    UNKNOWN = "unknown"
+
+
+# Public plate:     region(2) + letter(1) + digits(3) + letters(2)  e.g. 01Z552TB
+_PUBLIC_RE = re.compile(r'^[0-9]{2}[A-Z][0-9]{3}[A-Z]{2}$')
+
+# Government/company plate: region(2) + digits(3) + letters(3)  e.g. 01007WHA
+_GOVT_RE = re.compile(r'^[0-9]{2}[0-9]{3}[A-Z]{3}$')
 
 # Official Uzbekistan region codes
 VALID_REGIONS = {
@@ -35,27 +45,32 @@ def normalize(text: str) -> str:
     return cleaned
 
 
-def validate_plate(text: str) -> tuple[bool, str]:
+def validate_plate(text: str) -> tuple[bool, str, PlateType]:
     """
-    Returns (is_valid, normalized_plate_text).
-    Applies normalization and attempts common OCR correction before validating.
+    Returns (is_valid, normalized_plate_text, plate_type).
+    Tries both public and government formats, with OCR correction.
     """
     normalized = normalize(text)
 
-    if UZ_PLATE_RE.match(normalized) and normalized[:2] in VALID_REGIONS:
-        return True, normalized
+    if _PUBLIC_RE.match(normalized) and normalized[:2] in VALID_REGIONS:
+        return True, normalized, PlateType.PUBLIC
 
-    # Attempt OCR correction on the letter positions (index 2 and 6,7)
-    # Region digits at 0-1 should stay digits; letter at 2; digits at 3-5; letters at 6-7
-    corrected = _try_correct(normalized)
-    if corrected and UZ_PLATE_RE.match(corrected) and corrected[:2] in VALID_REGIONS:
-        return True, corrected
+    if _GOVT_RE.match(normalized) and normalized[:2] in VALID_REGIONS:
+        return True, normalized, PlateType.GOVERNMENT
 
-    return False, normalized
+    corrected_public = _try_correct_public(normalized)
+    if corrected_public and _PUBLIC_RE.match(corrected_public) and corrected_public[:2] in VALID_REGIONS:
+        return True, corrected_public, PlateType.PUBLIC
+
+    corrected_govt = _try_correct_government(normalized)
+    if corrected_govt and _GOVT_RE.match(corrected_govt) and corrected_govt[:2] in VALID_REGIONS:
+        return True, corrected_govt, PlateType.GOVERNMENT
+
+    return False, normalized, PlateType.UNKNOWN
 
 
-def _try_correct(text: str) -> str | None:
-    """Attempt to fix a plate that is close to valid UZ format."""
+def _try_correct_public(text: str) -> str | None:
+    """Attempt to fix a plate close to public format: [DD][L][DDD][LL]."""
     if len(text) != 8:
         return None
 
@@ -72,6 +87,30 @@ def _try_correct(text: str) -> str | None:
 
     # Positions 2,6,7 must be letters
     for i in (2, 6, 7):
+        if not chars[i].isalpha():
+            return None
+
+    return ''.join(chars)
+
+
+def _try_correct_government(text: str) -> str | None:
+    """Attempt to fix a plate close to government format: [DD][DDD][LLL]."""
+    if len(text) != 8:
+        return None
+
+    chars = list(text)
+
+    # Positions 0-4 must be digits
+    for i in range(5):
+        if not chars[i].isdigit():
+            fix = _OCR_FIXES.get(chars[i])
+            if fix:
+                chars[i] = fix
+            else:
+                return None
+
+    # Positions 5,6,7 must be letters
+    for i in (5, 6, 7):
         if not chars[i].isalpha():
             return None
 

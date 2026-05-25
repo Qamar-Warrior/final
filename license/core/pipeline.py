@@ -8,7 +8,7 @@ import numpy as np
 
 from core.detector import PlateDetector
 from core.recognizer import TextRecognizer
-from core.validator import validate_plate
+from core.validator import PlateType, validate_plate
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class DetectionResult:
     raw_text: str
     plate_text: str
     is_valid: bool
+    plate_type: PlateType
     confidence: float         # combined YOLO + OCR confidence
     bbox: list[int]           # [x1, y1, x2, y2]
     timestamp: datetime = field(default_factory=datetime.utcnow)
@@ -111,7 +112,7 @@ class Pipeline:
             if not raw_text:
                 continue
 
-            is_valid, plate_text = validate_plate(raw_text)
+            is_valid, plate_text, plate_type = validate_plate(raw_text)
 
             # Combined confidence: geometric mean of YOLO and OCR scores
             combined_conf = round((det['confidence'] * ocr_conf) ** 0.5, 4)
@@ -121,6 +122,7 @@ class Pipeline:
                 raw_text=raw_text,
                 plate_text=plate_text,
                 is_valid=is_valid,
+                plate_type=plate_type,
                 confidence=combined_conf,
                 bbox=det['bbox'],
                 frame=frame,

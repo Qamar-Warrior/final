@@ -35,54 +35,55 @@ class DatabaseManager:
             self._conn.execute("PRAGMA journal_mode=WAL")
             schema = _SCHEMA_PATH.read_text()
             self._conn.executescript(schema)
-            # Migrate existing databases that don't have image_path yet
             cols = {row[1] for row in self._conn.execute("PRAGMA table_info(detections)")}
             if "image_path" not in cols:
                 self._conn.execute("ALTER TABLE detections ADD COLUMN image_path TEXT")
+            if "plate_type" not in cols:
+                self._conn.execute("ALTER TABLE detections ADD COLUMN plate_type TEXT NOT NULL DEFAULT 'unknown'")
+            vp_cols = {row[1] for row in self._conn.execute("PRAGMA table_info(valid_plates)")}
+            if "plate_type" not in vp_cols:
+                self._conn.execute("ALTER TABLE valid_plates ADD COLUMN plate_type TEXT NOT NULL DEFAULT 'unknown'")
 
     # ------------------------------------------------------------------
     # Write
     # ------------------------------------------------------------------
 
     def save_detection(self, result: DetectionResult) -> int:
-        """Insert a detection result. Returns the new row id."""
+        """Insert a detection only if a frame image is saved. Returns row id or -1."""
+        image_path = self._save_frame(result)
+        if image_path is None:
+            return -1
+
         bbox = result.bbox if len(result.bbox) == 4 else [None, None, None, None]
         with self._conn:
             cursor = self._conn.execute(
                 """
                 INSERT INTO detections
-                    (source, plate_text, raw_text, is_valid, confidence,
-                     bbox_x1, bbox_y1, bbox_x2, bbox_y2, detected_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (source, plate_text, raw_text, is_valid, plate_type, confidence,
+                     bbox_x1, bbox_y1, bbox_x2, bbox_y2, detected_at, image_path)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     result.source,
                     result.plate_text,
                     result.raw_text,
                     int(result.is_valid),
+                    result.plate_type.value,
                     result.confidence,
                     bbox[0], bbox[1], bbox[2], bbox[3],
-                 result.timestamp.strftime("%d %B %Y %H:%M:%S"),
-
+                    result.timestamp.strftime("%d %B %Y %H:%M:%S"),
+                    image_path,
                 ),
             )
-            record_id = cursor.lastrowid
+            return cursor.lastrowid
 
-        image_path = self._save_frame(record_id, result)
-        if image_path:
-            with self._conn:
-                self._conn.execute(
-                    "UPDATE detections SET image_path = ? WHERE id = ?",
-                    (image_path, record_id),
-                )
-
-        return record_id
-
-    def _save_frame(self, record_id: int, result: DetectionResult) -> str | None:
-        """Save the full frame to disk. Returns the file path or None."""
+    def _save_frame(self, result: DetectionResult) -> str | None:
+        """Save the full frame to disk named after the license plate. Returns the file path or None."""
         if self.images_dir is None or result.frame is None or result.frame.size == 0:
             return None
-        filename = f"{record_id}.jpg"
+        plate = result.plate_text.strip() if result.plate_text else "unknown"
+        timestamp = result.timestamp.strftime("%Y%m%d_%H%M%S_%f")
+        filename = f"{plate}_{timestamp}.jpg"
         filepath = self.images_dir / filename
         ok = cv2.imwrite(str(filepath), result.frame)
         if not ok:
@@ -95,15 +96,15 @@ class DatabaseManager:
         with self._conn:
             cursor = self._conn.execute(
                 """
-                INSERT INTO valid_plates (plate_text, confidence, source, detected_at)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO valid_plates (plate_text, plate_type, confidence, source, detected_at)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 (
                     result.plate_text,
+                    result.plate_type.value,
                     result.confidence,
                     result.source,
-                          result.timestamp.strftime("%d %B %Y %H:%M:%S"),
-
+                    result.timestamp.strftime("%d %B %Y %H:%M:%S"),
                 ),
             )
             return cursor.lastrowid
@@ -151,10 +152,15 @@ class DatabaseManager:
             "SELECT source, COUNT(*) as cnt FROM detections "
             "GROUP BY source ORDER BY cnt DESC LIMIT 20"
         ).fetchall()
+        by_type = self._conn.execute(
+            "SELECT plate_type, COUNT(*) as cnt FROM detections "
+            "WHERE is_valid = 1 GROUP BY plate_type"
+        ).fetchall()
         return {
             "total_detections": total,
             "valid_plates": valid,
             "invalid_plates": total - valid,
+            "by_plate_type": {row["plate_type"]: row["cnt"] for row in by_type},
             "top_sources": [dict(r) for r in sources],
         }
 

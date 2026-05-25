@@ -8,6 +8,7 @@ class DetectionResponse(BaseModel):
     plate_text: str
     raw_text: str
     is_valid: bool
+    plate_type: str | None = None
     confidence: float
     bbox_x1: int | None
     bbox_y1: int | None
@@ -28,6 +29,7 @@ class StatsResponse(BaseModel):
     total_detections: int
     valid_plates: int
     invalid_plates: int
+    by_plate_type: dict
     top_sources: list[dict]
 
 
